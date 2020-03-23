@@ -1,9 +1,11 @@
 from flask import Flask, jsonify
 from data import db_session
 from data.users import User
+from data.jobs import Jobs
 from data.news import News
 from data import jobs_api
 from flask_restful import reqparse, abort, Api, Resource
+import datetime
 
 
 class NewsResource(Resource):
@@ -117,10 +119,19 @@ def main1():
     pirat.address = 'None'
     pirat.email = 'shlupka_and_korable@ykral.money'
 
+    job = Jobs()
+    job.team_leader = 1
+    job.job = 'deployment of residential modules 1 and 2'
+    job.work_size = 15
+    job.collaborators = '2, 3'
+    job.start_date = datetime.datetime.now()
+    job.is_finished = False
+
     session.add(captain)
     session.add(colonist)
     session.add(cook)
     session.add(pirat)
+    session.add(job)
     session.commit()
 
 
