@@ -1,64 +1,14 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, render_template
+from werkzeug.utils import redirect
 from data import db_session
 from data.users import User
 from data.jobs import Jobs
+from data.registrform import RegisterForm
 from data.news import News
+from data.resource import NewsResource, NewsListResource
 from data import jobs_api
-from flask_restful import reqparse, abort, Api, Resource
+from flask_restful import Api
 import datetime
-
-
-class NewsResource(Resource):
-    def get(self, news_id):
-        abort_if_news_not_found(news_id)
-        session = db_session.create_session()
-        news = session.query(News).get(news_id)
-        return jsonify({'news': news.to_dict(
-            only=('title', 'content', 'user_id', 'is_private'))})
-
-    def delete(self, news_id):
-        abort_if_news_not_found(news_id)
-        session = db_session.create_session()
-        news = session.query(News).get(news_id)
-        session.delete(news)
-        session.commit()
-        return jsonify({'success': 'OK'})
-
-
-class NewsListResource(Resource):
-    def get(self):
-        session = db_session.create_session()
-        news = session.query(News).all()
-        return jsonify({'news': [item.to_dict(
-            only=('title', 'content', 'user.name')) for item in news]})
-
-    def post(self):
-        args = parser.parse_args()
-        session = db_session.create_session()
-        news = News(
-            title=args['title'],
-            content=args['content'],
-            user_id=args['user_id'],
-            is_published=args['is_published'],
-            is_private=args['is_private']
-        )
-        session.add(news)
-        session.commit()
-        return jsonify({'success': 'OK'})
-
-
-def abort_if_news_not_found(news_id):
-    session = db_session.create_session()
-    news = session.query(News).get(news_id)
-    if not news:
-        abort(404, message=f"News {news_id} not found")
-
-
-def main():
-    db_session.global_init("db/blogs.sqlite")
-    app.register_blueprint(jobs_api.blueprint)
-    app.run()
-
 
 db_session.global_init("db/blogs.sqlite")
 
@@ -74,12 +24,43 @@ def index():
     return render_template("index.html", jobs=jobs)
 
 
-parser = reqparse.RequestParser()
-parser.add_argument('title', required=True)
-parser.add_argument('content', required=True)
-parser.add_argument('is_private', required=True)
-parser.add_argument('is_published', required=True)
-parser.add_argument('user_id', required=True, type=int)
+@app.route('/login')
+def login():
+    return 'робит четко!'
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def reqister():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        if form.password.data != form.password_again.data:
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Пароли не совпадают")
+        session = db_session.create_session()
+        if session.query(User).filter(User.email == form.email.data).first():
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Такой пользователь уже есть")
+        user = User(surname=form.surname.data,
+                    name=form.name.data,
+                    age=form.age.data,
+                    position=form.position.data,
+                    speciality=form.speciality.data,
+                    address=form.address.data,
+                    email=form.email.data
+                    )
+        user.set_password(form.password.data)
+        session.add(user)
+        session.commit()
+        return redirect('/login')
+    return render_template('register.html', title='Регистрация', form=form)
+
+
+def main():
+    db_session.global_init("db/blogs.sqlite")
+    app.register_blueprint(jobs_api.blueprint)
+    app.run()
 
 
 def main1():
@@ -130,7 +111,7 @@ def main1():
     session.add(job)
 
     job = Jobs()
-    job.team_leader = 1
+    job.team_leader = 2
     job.job = 'deployment of residential modules 1 and 2'
     job.work_size = 15
     job.collaborators = '2, 3'
@@ -139,7 +120,7 @@ def main1():
     session.add(job)
 
     job = Jobs()
-    job.team_leader = 1
+    job.team_leader = 3
     job.job = 'deployment of residential modules 1 and 2'
     job.work_size = 15
     job.collaborators = '2, 3'
@@ -154,6 +135,8 @@ def main1():
     session.commit()
 
     app.run()
+
+
 if __name__ == '__main__':
     try:
         main1()

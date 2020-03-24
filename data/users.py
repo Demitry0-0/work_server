@@ -1,6 +1,6 @@
 import sqlalchemy
-from .db_session import SqlAlchemyBase, orm, create_session
-
+from .db_session import SqlAlchemyBase, orm
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(SqlAlchemyBase):
     __tablename__ = 'users'
@@ -18,7 +18,8 @@ class User(SqlAlchemyBase):
     modified_date = sqlalchemy.Column(sqlalchemy.DateTime)
     news = orm.relation("News", back_populates='user')
 
-    def __repr__(self):
-        session = create_session()
-        for user in session.query(User).all():
-            print(user)
+    def set_password(self, password):
+        self.hashed_password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.hashed_password, password)
