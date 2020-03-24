@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 from data import db_session
 from data.users import User
 from data.jobs import Jobs
@@ -67,9 +67,11 @@ api = Api(app)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 
 
-@app.route('/')
-def hack():
-    return '<center><h1>Ну че вроде робит</h1></center>'
+@app.route("/")
+def index():
+    session = db_session.create_session()
+    jobs = session.query(Jobs)
+    return render_template("index.html", jobs=jobs)
 
 
 parser = reqparse.RequestParser()
@@ -81,7 +83,6 @@ parser.add_argument('user_id', required=True, type=int)
 
 
 def main1():
-    # app.run()
     session = db_session.create_session()
     captain = User()
     captain.surname = 'Scott'
@@ -126,14 +127,35 @@ def main1():
     job.collaborators = '2, 3'
     job.start_date = datetime.datetime.now()
     job.is_finished = False
+    session.add(job)
+
+    job = Jobs()
+    job.team_leader = 1
+    job.job = 'deployment of residential modules 1 and 2'
+    job.work_size = 15
+    job.collaborators = '2, 3'
+    job.start_date = datetime.datetime.now()
+    job.is_finished = False
+    session.add(job)
+
+    job = Jobs()
+    job.team_leader = 1
+    job.job = 'deployment of residential modules 1 and 2'
+    job.work_size = 15
+    job.collaborators = '2, 3'
+    job.start_date = datetime.datetime.now()
+    job.is_finished = False
+    session.add(job)
 
     session.add(captain)
     session.add(colonist)
     session.add(cook)
     session.add(pirat)
-    session.add(job)
     session.commit()
 
-
+    app.run()
 if __name__ == '__main__':
-    main1()
+    try:
+        main1()
+    except:
+        main()
