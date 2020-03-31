@@ -1,13 +1,17 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, make_response
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask_restful import Api, abort
 from werkzeug.utils import redirect
 from data import db_session
+from data.newsform import NewsForm
 from data.users import User
 from data.jobs import Jobs
+from data.jobsform import JobsForm
 from data.registrform import RegisterForm
+from data.loginform import LoginForm
 from data.news import News
 from data.resource import NewsResource, NewsListResource
 from data import jobs_api
-from flask_restful import Api
 import datetime
 
 db_session.global_init("db/blogs.sqlite")
@@ -16,17 +20,192 @@ app = Flask(__name__)
 api = Api(app)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
 
 @app.route("/")
 def index():
     session = db_session.create_session()
     jobs = session.query(Jobs)
-    return render_template("index.html", jobs=jobs)
+    return render_template("index_jobs.html", jobs=jobs)
+    '''
+    session = db_session.create_session()
+    news = session.query(News).filter(News.is_private != True)[::-1]
+    return render_template("index.html", news=news)'''
 
 
-@app.route('/login')
+@app.route("/jobs")
+def index_jobs():
+    session = db_session.create_session()
+    jobs = session.query(Jobs)
+    return render_template("index_jobs.html", jobs=jobs)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    session = db_session.create_session()
+    return session.query(User).get(user_id)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect("/")
+
+
+@app.route('/new_jobs', methods=['GET', 'POST'])
+@login_required
+def add_jobs():
+    form = JobsForm()
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        job = Jobs()
+        job.job = form.job.data
+        job.team_leader = form.team_leader.data
+        job.work_size = form.work_size.data
+        job.collaborators = form.collaborators.data
+        job.is_finished = form.is_finished.data
+        # current_user.jobs.append(job)
+        # session.merge(current_user)
+        session.add(job)
+        session.commit()
+        return redirect('/jobs')
+    return render_template('jobs.html', title='Добавление работы',
+                           form=form)
+
+
+@app.route('/new_job/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_job(id):
+    form = JobsForm()
+    if request.method == "GET":
+        session = db_session.create_session()
+        job = session.query(Jobs).filter(Jobs.id == id,
+                                         Jobs.user == current_user).first()
+        if not job:
+            job = session.query(Jobs).filter(Jobs.id == id,
+                                             1 == current_user.id).first()
+        if job:
+            form.job.data = job.job
+            form.team_leader.data = job.team_leader
+            form.work_size.data = job.work_size
+            form.collaborators.data = job.collaborators
+            form.is_finished.data = job.is_finished
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        job = session.query(Jobs).filter(Jobs.id == id,
+                                         Jobs.user == current_user).first()
+        if not job:
+            job = session.query(Jobs).filter(Jobs.id == id,
+                                             1 == current_user.id).first()
+        if job:
+            job.job = form.job.data
+            job.team_leader = form.team_leader.data
+            job.work_size = form.work_size.data
+            job.collaborators = form.collaborators.data
+            job.is_finished = form.is_finished.data
+            session.commit()
+            return redirect('/jobs')
+        else:
+            abort(404)
+    return render_template('jobs.html', title='Редактирование работы', form=form)
+
+
+@app.route('/job_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def job_delete(id):
+    session = db_session.create_session()
+    job = session.query(Jobs).filter(Jobs.id == id,
+                                     Jobs.user == current_user).first()
+    if not job:
+        job = session.query(Jobs).filter(Jobs.id == id,
+                                         1 == current_user.id).first()
+    if job:
+        session.delete(job)
+        session.commit()
+    else:
+        abort(404)
+    return redirect('/jobs')
+
+
+@app.route('/news', methods=['GET', 'POST'])
+@login_required
+def add_news():
+    form = NewsForm()
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        news = News()
+        news.title = form.title.data
+        news.content = form.content.data
+        news.is_private = form.is_private.data
+        current_user.news.append(news)
+        session.merge(current_user)
+        session.commit()
+        return redirect('/')
+    return render_template('news.html', title='Добавление новости',
+                           form=form)
+
+
+@app.route('/news/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_news(id):
+    form = NewsForm()
+    if request.method == "GET":
+        session = db_session.create_session()
+        news = session.query(News).filter(News.id == id,
+                                          News.user == current_user).first()
+        if news:
+            form.title.data = news.title
+            form.content.data = news.content
+            form.is_private.data = news.is_private
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        news = session.query(News).filter(News.id == id,
+                                          News.user == current_user).first()
+        if news:
+            news.title = form.title.data
+            news.content = form.content.data
+            news.is_private = form.is_private.data
+            session.commit()
+            return redirect('/')
+        else:
+            abort(404)
+    return render_template('news.html', title='Редактирование новости', form=form)
+
+
+@app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def news_delete(id):
+    session = db_session.create_session()
+    news = session.query(News).filter(News.id == id,
+                                      News.user == current_user).first()
+    if news:
+        session.delete(news)
+        session.commit()
+    else:
+        abort(404)
+    return redirect('/')
+
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return 'робит четко!'
+    form = LoginForm()
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        user = session.query(User).filter(User.email == form.email.data).first()
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            return redirect("/")
+        return render_template('login.html',
+                               message="Неправильный логин или пароль",
+                               form=form)
+    return render_template('login.html', title='Авторизация', form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -65,6 +244,7 @@ def main():
 
 def main1():
     session = db_session.create_session()
+
     captain = User()
     captain.surname = 'Scott'
     captain.name = 'Ridley'
@@ -73,6 +253,7 @@ def main1():
     captain.speciality = 'research engineer'
     captain.address = 'module_1'
     captain.email = 'scott_chief@mars.org'
+    captain.hashed_password = 'pbkdf2:sha256:150000$LkAJpQHX$7aafb27f30c177120cb83bed0160aedf1191ead14acfd0df5ce6f8792f1b474f'
 
     colonist = User()
     colonist.surname = 'Htata'
@@ -134,10 +315,22 @@ def main1():
     session.add(pirat)
     session.commit()
 
+    news = News(title="Первая новость", content="Привет блог!",
+                user_id=2, is_private=False)
+    session.add(news)
+    session.commit()
+    user = session.query(User).filter(User.id == 1).first()
+    news = News(title="Вторая новость", content="Уже вторая запись!",
+                user=user, is_private=False)
+    session.add(news)
+    session.commit()
+
     app.run()
 
 
 if __name__ == '__main__':
+    a = 80 * '*' + ' '
+    print(f'{a}КАПИТАН\n{a}ПОЧТА: scott_chief@mars.org\n{a}ПАРОЛЬ: 123123')
     try:
         main1()
     except:

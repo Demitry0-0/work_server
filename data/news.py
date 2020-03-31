@@ -2,7 +2,7 @@ import datetime
 import sqlalchemy
 from sqlalchemy import orm
 from .db_session import SqlAlchemyBase
-
+from data.category import Category
 
 class News(SqlAlchemyBase):
     __tablename__ = 'news'
@@ -18,4 +18,7 @@ class News(SqlAlchemyBase):
     user_id = sqlalchemy.Column(sqlalchemy.Integer,
                                 sqlalchemy.ForeignKey("users.id"))
     is_published = sqlalchemy.Column(sqlalchemy.Boolean, default=True)
+    categories = orm.relation("Category",
+                              secondary="association",
+                              backref="news")
     user = orm.relation('User')
