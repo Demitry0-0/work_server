@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, make_response
+from flask import Flask, render_template, request, make_response, jsonify
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from flask_restful import Api, abort
+from flask_restful import reqparse, abort, Api, Resource
 from werkzeug.utils import redirect
 from data import db_session
 from data.newsform import NewsForm
@@ -10,15 +10,28 @@ from data.jobsform import JobsForm
 from data.registrform import RegisterForm
 from data.loginform import LoginForm
 from data.news import News
-from data.resource import NewsResource, NewsListResource
 from data import jobs_api
+from data import news_api
+from data.news_resources import NewsResource, NewsListResource
+from data.users_resource import UsersResource, UsersListResource
+from data.jobs_resource import JobsResource, JobsListResource
 import datetime
 
 db_session.global_init("db/blogs.sqlite")
 
 app = Flask(__name__)
-api = Api(app)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
+
+api = Api(app)
+# для списка объектов
+api.add_resource(NewsListResource, '/api/v2/news')
+api.add_resource(UsersListResource, '/api/v2/users')
+api.add_resource(JobsListResource, '/api/v2/jobs')
+
+# для одного объекта
+api.add_resource(NewsResource, '/api/v2/news/<int:news_id>')
+api.add_resource(UsersResource, '/api/v2/users/<int:user_id>')
+api.add_resource(JobsResource, '/api/v2/jobs/<int:job_id>')
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -26,13 +39,15 @@ login_manager.init_app(app)
 
 @app.route("/")
 def index():
-    session = db_session.create_session()
-    jobs = session.query(Jobs)
-    return render_template("index_jobs.html", jobs=jobs)
-    '''
-    session = db_session.create_session()
+    '''session = db_session.create_session()
     news = session.query(News).filter(News.is_private != True)[::-1]
     return render_template("index.html", news=news)'''
+    return index_jobs()
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({'error': 'Not found'}), 404)
 
 
 @app.route("/jobs")
@@ -83,10 +98,7 @@ def edit_job(id):
     if request.method == "GET":
         session = db_session.create_session()
         job = session.query(Jobs).filter(Jobs.id == id,
-                                         Jobs.user == current_user).first()
-        if not job:
-            job = session.query(Jobs).filter(Jobs.id == id,
-                                             1 == current_user.id).first()
+                                         (Jobs.user == current_user) | (1 == current_user.id)).first()
         if job:
             form.job.data = job.job
             form.team_leader.data = job.team_leader
@@ -237,7 +249,7 @@ def reqister():
 
 
 def main():
-    db_session.global_init("db/blogs.sqlite")
+    app.register_blueprint(news_api.blueprint)
     app.register_blueprint(jobs_api.blueprint)
     app.run()
 

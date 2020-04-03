@@ -3,6 +3,19 @@ from flask import jsonify
 from data import db_session
 from data.jobs import Jobs
 
+parser = reqparse.RequestParser()
+parser.add_argument('team_leader', required=True, type=int)
+parser.add_argument('job', required=True)
+parser.add_argument('work_size', required=True, type=int)
+parser.add_argument('collaborators', required=True)
+parser.add_argument('is_finished', required=True, type=bool)
+
+
+def abort_if_jobs_not_found(job_id):
+    session = db_session.create_session()
+    jobs = session.query(Jobs).get(job_id)
+    if not jobs:
+        abort(404, message=f"Jobs {job_id} not found")
 
 class JobsResource(Resource):
     def get(self, job_id):
@@ -14,10 +27,10 @@ class JobsResource(Resource):
                   'collaborators', 'start_date', 'end_date', 'is_finished'
                   ))})
 
-    def delete(self, jobs_id):
-        abort_if_jobs_not_found(jobs_id)
+    def delete(self, job_id):
+        abort_if_jobs_not_found(job_id)
         session = db_session.create_session()
-        job = session.query(Jobs).get(jobs_id)
+        job = session.query(Jobs).get(job_id)
         session.delete(job)
         session.commit()
         return jsonify({'success': 'OK'})
@@ -40,27 +53,9 @@ class JobsListResource(Resource):
             job=args['job'],
             work_size=args['work_size'],
             collaborators=args['collaborators'],
-            start_date=args['start_date'],
-            end_date=args['end_date'],
             is_finished=args['is_finished']
         )
         session.add(jobs)
         session.commit()
         return jsonify({'success': 'OK'})
 
-
-def abort_if_jobs_not_found(jobs_id):
-    session = db_session.create_session()
-    jobs = session.query(Jobs).get(jobs_id)
-    if not jobs:
-        abort(404, message=f"Jobs {jobs_id} not found")
-
-
-parser = reqparse.RequestParser()
-parser.add_argument('team_leader', required=True)
-parser.add_argument('job', required=True)
-parser.add_argument('work_size', required=True, type=int)
-parser.add_argument('collaborators', required=True)
-parser.add_argument('start_date', required=True)
-parser.add_argument('end_date', required=True)
-parser.add_argument('is_finished', required=True)
