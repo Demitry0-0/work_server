@@ -10,7 +10,8 @@ class Departaments(SqlAlchemyBase):
                            primary_key=True, autoincrement=True)
     title = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     chief = sqlalchemy.Column(sqlalchemy.Integer,
-                                    sqlalchemy.ForeignKey("users.id"), nullable=True)
+                              sqlalchemy.ForeignKey("users.id"),
+                              nullable=True)
     members = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     email = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     user = orm.relation('User', back_populates='departaments')

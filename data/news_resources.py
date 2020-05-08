@@ -2,7 +2,7 @@ from flask_restful import Resource, abort, reqparse
 from flask import jsonify
 from data.news import News
 from data import db_session
-import datetime
+
 
 parser = reqparse.RequestParser()
 parser.add_argument('title', required=True)

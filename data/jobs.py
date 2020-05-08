@@ -1,6 +1,7 @@
 import sqlalchemy
 from sqlalchemy import orm
 from .db_session import SqlAlchemyBase
+from data.jobscategory import JobsCategory
 from sqlalchemy_serializer import SerializerMixin
 
 
@@ -18,4 +19,7 @@ class Jobs(SqlAlchemyBase, SerializerMixin):
     start_date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True)
     end_date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True)
     is_finished = sqlalchemy.Column(sqlalchemy.Boolean, nullable=True)
+    categories = orm.relation("JobsCategory",
+                              secondary="jobs_to_category",
+                              backref="jobs")
     user = orm.relation('User', back_populates='jobs')
