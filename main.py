@@ -14,9 +14,12 @@ from data.departamentform import DepartamentForm
 from data.news import News
 from data import jobs_api
 from data import news_api
+from data import users_api
+from data.maps import maps
 from data.news_resources import NewsResource, NewsListResource
 from data.users_resource import UsersResource, UsersListResource
 from data.jobs_resource import JobsResource, JobsListResource
+from requests import get
 import datetime
 
 db_session.global_init("db/blogs.sqlite")
@@ -64,6 +67,23 @@ def logout():
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
+
+
+@app.route('/users_show/<int:user_id>')
+def users_show(user_id):
+    session = db_session.create_session()
+    user = session.query(User).get(user_id)
+    if not user:
+        return '<br><br><center><h1>НЕТ ТАКОГО ПОЛЬЗОВАТЕЛЯ</h1></center>'
+    user = get('http://localhost:5000/api/users/' + str(user_id)).json()['user']
+    home = user['address']
+    surname, name = user['surname'], user['name']
+    if maps(home, str(user_id)):
+        return render_template('users_show.html', title=home, home=home,
+                               name=name, surname=surname,
+                               photo='/static/img/users_home/home_user_' + str(user_id) + '.jpg')
+    return render_template('users_show.html', title=home, home=home,
+                           name=name, surname=surname)
 
 
 @app.route('/departamens')
@@ -334,6 +354,7 @@ def reqister():
 def main():
     app.register_blueprint(news_api.blueprint)
     app.register_blueprint(jobs_api.blueprint)
+    app.register_blueprint(users_api.blueprint)
     app.run()
 
 

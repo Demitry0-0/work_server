@@ -68,7 +68,7 @@ def transform_one_jobs(job_id):
         return jsonify({'error': 'Not found'})
     for key in ['id', 'team_leader', 'job', 'work_size', 'collaborators', 'is_finished']:
         if key in request.json.keys():
-            exec('job.{}={}'.format(key, request.json[key]))
+            exec('job.{}="{}"'.format(key, request.json[key]))
     session.commit()
     return jsonify({'success': 'OK'})
 
