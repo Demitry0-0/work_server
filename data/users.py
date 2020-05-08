@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from sqlalchemy_serializer import SerializerMixin
 
+
 class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     __tablename__ = 'users'
 
@@ -21,6 +22,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
 
     news = orm.relation("News", back_populates='user')
     jobs = orm.relation("Jobs", back_populates='user')
+    departaments = orm.relation("Departaments", back_populates='user')
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

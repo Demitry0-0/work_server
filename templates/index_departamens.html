@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if current_user.is_authenticated %}
+<a class="navbar-brand" href="/logout">{{ current_user.name }}</a>
+{% else %}
+<p>
+    <a class="btn btn-primary " href="/register">Зарегистрироваться</a>
+    <a class="btn btn-success" href="/login">Войти</a>
+</p>
+{% endif %}
+<p>
+    <a class="btn btn-primary " href="/jobs">Работы</a>
+    <a class="btn btn-success" href="/departamens">Департаменты</a>
+</p>
+<center><h1>Записи департамента</h1></center>
+{% if current_user.is_authenticated %}
+<a href="new_departament" class="btn btn-secondary">Добавить департамент </a>
+{% endif %}
+{% for item in departamens%}
+<div class="col-md6 border rounded">
+    <h2>Depatament #{{item.id}}</h2>
+    <div>
+        <table border="1">
+            <tr bgcolor="#E0FFFF">
+                <td>название департамента</td>
+                <td>фамилия и имя ответственного</td>
+                <td>список id команды</td>
+                <td>почта</td>
+            </tr>
+            <tr bgcolor="#AFEEEE">
+                <td>{{item.title}}</td>
+                <td>{{item.user.surname}} {{item.user.name}}</td>
+                <td>{{item.members}}</td>
+                <td>{{item.email}}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+{% if current_user.is_authenticated and (current_user == item.user or current_user.id == 1)%}
+<div>
+    <a href="/new_departament/{{ item.id }}" class="btn btn-warning">Изменить</a>
+    <a href="/departament_delete/{{ item.id }}" class="btn btn-danger">Удалить</a>
+</div>
+{% endif %}
+<br>
+{% endfor %}
+{% endblock %}

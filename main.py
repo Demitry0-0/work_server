@@ -5,10 +5,12 @@ from werkzeug.utils import redirect
 from data import db_session
 from data.newsform import NewsForm
 from data.users import User
+from data.departments import Departaments
 from data.jobs import Jobs
 from data.jobsform import JobsForm
 from data.registrform import RegisterForm
 from data.loginform import LoginForm
+from data.departamentform import DepartamentForm
 from data.news import News
 from data import jobs_api
 from data import news_api
@@ -39,22 +41,11 @@ login_manager.init_app(app)
 
 @app.route("/")
 def index():
+    # для новостей и для работ
     '''session = db_session.create_session()
     news = session.query(News).filter(News.is_private != True)[::-1]
     return render_template("index.html", news=news)'''
     return index_jobs()
-
-
-@app.errorhandler(404)
-def not_found(error):
-    return make_response(jsonify({'error': 'Not found'}), 404)
-
-
-@app.route("/jobs")
-def index_jobs():
-    session = db_session.create_session()
-    jobs = session.query(Jobs)
-    return render_template("index_jobs.html", jobs=jobs)
 
 
 @login_manager.user_loader
@@ -68,6 +59,97 @@ def load_user(user_id):
 def logout():
     logout_user()
     return redirect("/")
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({'error': 'Not found'}), 404)
+
+
+@app.route('/departamens')
+def index_departamens():
+    session = db_session.create_session()
+    departamens = session.query(Departaments)
+    return render_template('index_departamens.html', departamens=departamens)
+
+
+@app.route('/new_departament', methods=['GET', 'POST'])
+@login_required
+def add_departament():
+    form = DepartamentForm()
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        departament = Departaments()
+        departament.title = form.title.data
+        departament.chief = form.chief.data
+        departament.members = form.members.data
+        departament.email = form.email.data
+        # current_user.jobs.append(job)
+        # session.merge(current_user)
+        session.add(departament)
+        session.commit()
+        return redirect('/departamens')
+    return render_template('new_departament.html', title='Добавление работы',
+                           form=form)
+
+
+@app.route('/new_departament/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_departament(id):
+    form = DepartamentForm()
+    if request.method == "GET":
+        session = db_session.create_session()
+        departament = session.query(Departaments).filter(Departaments.id == id,
+                                                         (Departaments.user == current_user) | (
+                                                                 1 == current_user.id)).first()
+        if departament:
+            form.title.data = departament.title
+            form.chief.data = departament.chief
+            form.members.data = departament.members
+            form.email.data = departament.email
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        session = db_session.create_session()
+        departament = session.query(Departaments).filter(Departaments.id == id,
+                                                         Departaments.user == current_user).first()
+        if not departament:
+            departament = session.query(Departaments).filter(Departaments.id == id,
+                                                             1 == current_user.id).first()
+        if departament:
+            departament.title = form.title.data
+            departament.chief = form.chief.data
+            departament.members = form.members.data
+            departament.email = form.email.data
+            session.commit()
+            return redirect('/departamens')
+        else:
+            abort(404)
+    return render_template('new_departament.html', title='Редактирование работы', form=form)
+
+
+@app.route('/departament_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def departament_delete(id):
+    session = db_session.create_session()
+    departament = session.query(Departaments).filter(Departaments.id == id,
+                                                     Departaments.user == current_user).first()
+    if not departament:
+        departament = session.query(Departaments).filter(Departaments.id == id,
+                                                         1 == current_user.id).first()
+    if departament:
+        session.delete(departament)
+        session.commit()
+    else:
+        abort(404)
+    return redirect('/departamens')
+
+
+@app.route("/jobs")
+def index_jobs():
+    session = db_session.create_session()
+    jobs = session.query(Jobs)
+    return render_template("index_jobs.html", jobs=jobs)
 
 
 @app.route('/new_jobs', methods=['GET', 'POST'])
@@ -98,7 +180,8 @@ def edit_job(id):
     if request.method == "GET":
         session = db_session.create_session()
         job = session.query(Jobs).filter(Jobs.id == id,
-                                         (Jobs.user == current_user) | (1 == current_user.id)).first()
+                                         (Jobs.user == current_user) | (
+                                                 1 == current_user.id)).first()
         if job:
             form.job.data = job.job
             form.team_leader.data = job.team_leader
