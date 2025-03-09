@@ -9,6 +9,11 @@
         <a class="btn btn-success" href="/login">Войти</a>
     </p>
 {% endif %}
+<p>
+    <a class="btn btn-success" href="/jobs">Работы</a>
+    <a class="btn btn-success" href="/departamens">Департаменты</a>
+    <a class="btn btn-primary" href="/news_show">Новости</a>
+</p>
 <h1>Записи в блоге</h1>
 {% if current_user.is_authenticated %}
         <a href="news" class="btn btn-secondary">Добавить новость</a>

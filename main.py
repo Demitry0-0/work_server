@@ -45,11 +45,14 @@ login_manager.init_app(app)
 @app.route("/")
 def index():
     # для новостей и для работ
-    '''session = db_session.create_session()
-    news = session.query(News).filter(News.is_private != True)[::-1]
-    return render_template("index.html", news=news)'''
+    ''''''
     return index_jobs()
 
+@app.route("/news_show")
+def index_news():
+    session = db_session.create_session()
+    news = session.query(News).filter(News.is_private != True)[::-1]
+    return render_template("index.html", news=news)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -260,7 +263,7 @@ def add_news():
         current_user.news.append(news)
         session.merge(current_user)
         session.commit()
-        return redirect('/')
+        return redirect('/news_show')
     return render_template('news.html', title='Добавление новости',
                            form=form)
 
